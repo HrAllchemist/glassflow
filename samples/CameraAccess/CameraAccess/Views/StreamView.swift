@@ -25,19 +25,23 @@ struct StreamView: View {
 
   var body: some View {
     ZStack {
-      Color(hex: "F8F7F5")
+      Color.white
         .edgesIgnoringSafeArea(.all)
 
       VStack(spacing: 0) {
-        // Top bar with status
+        // Top bar
         TopBar(
           transcriptionVM: transcriptionVM,
           geminiVM: geminiVM,
           webrtcVM: webrtcVM
         )
 
+        Divider()
+
         // Main transcript area
         TranscriptionContentView(viewModel: transcriptionVM)
+
+        Divider()
 
         // Bottom controls
         ControlsView(
@@ -46,8 +50,8 @@ struct StreamView: View {
           webrtcVM: webrtcVM,
           transcriptionVM: transcriptionVM
         )
-        .padding(.horizontal, 24)
-        .padding(.bottom, 24)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
       }
     }
     .onDisappear {
@@ -113,29 +117,31 @@ struct TopBar: View {
   var body: some View {
     HStack {
       Text("GlassFlow")
-        .font(.system(size: 20, weight: .semibold))
-        .foregroundColor(.primary)
+        .font(.system(size: 22, weight: .bold))
+        .foregroundColor(.black)
 
       Spacer()
 
-      if transcriptionVM.isActive {
-        StatusDot(color: statusColor, text: statusText)
-      }
-      if geminiVM.isGeminiActive {
-        StatusDot(color: .green, text: "AI")
-      }
-      if webrtcVM.isActive {
-        StatusDot(color: .blue, text: "Live")
+      HStack(spacing: 8) {
+        if transcriptionVM.isActive {
+          StatusBadge(color: statusColor, text: statusText)
+        }
+        if geminiVM.isGeminiActive {
+          StatusBadge(color: .green, text: "AI")
+        }
+        if webrtcVM.isActive {
+          StatusBadge(color: .blue, text: "Live")
+        }
       }
     }
-    .padding(.horizontal, 24)
-    .padding(.vertical, 12)
+    .padding(.horizontal, 20)
+    .padding(.vertical, 14)
   }
 
   private var statusColor: Color {
     switch transcriptionVM.connectionState {
     case .connected: return .green
-    case .connecting: return .yellow
+    case .connecting: return .orange
     case .disconnected: return .gray
     case .error: return .red
     }
@@ -151,7 +157,7 @@ struct TopBar: View {
   }
 }
 
-struct StatusDot: View {
+struct StatusBadge: View {
   let color: Color
   let text: String
 
@@ -159,19 +165,15 @@ struct StatusDot: View {
     HStack(spacing: 5) {
       Circle()
         .fill(color)
-        .frame(width: 7, height: 7)
+        .frame(width: 8, height: 8)
       Text(text)
-        .font(.system(size: 12, weight: .medium))
-        .foregroundColor(.secondary)
+        .font(.system(size: 13, weight: .semibold))
+        .foregroundColor(.black.opacity(0.7))
     }
     .padding(.horizontal, 10)
-    .padding(.vertical, 5)
-    .background(Color(hex: "FCFBF9"))
-    .overlay(
-      RoundedRectangle(cornerRadius: 12)
-        .stroke(Color(hex: "E2E2E0"), lineWidth: 1)
-    )
-    .cornerRadius(12)
+    .padding(.vertical, 6)
+    .background(Color(UIColor.systemGray6))
+    .cornerRadius(14)
   }
 }
 
@@ -189,12 +191,13 @@ struct ControlsView: View {
       Button {
         Task { await viewModel.stopSession() }
       } label: {
-        Image(systemName: "stop.fill")
-          .font(.system(size: 14))
-          .foregroundColor(.red)
-          .frame(width: 48, height: 48)
-          .background(Color.red.opacity(0.1))
-          .cornerRadius(24)
+        Text("Stop")
+          .font(.system(size: 14, weight: .semibold))
+          .foregroundColor(.white)
+          .padding(.horizontal, 18)
+          .padding(.vertical, 12)
+          .background(Color.red)
+          .cornerRadius(22)
       }
 
       Spacer()
@@ -261,23 +264,19 @@ struct ControlPill: View {
 
   var body: some View {
     Button(action: action) {
-      HStack(spacing: 6) {
+      HStack(spacing: 5) {
         Image(systemName: icon)
-          .font(.system(size: 16))
+          .font(.system(size: 15))
         Text(label)
-          .font(.system(size: 13, weight: .medium))
+          .font(.system(size: 14, weight: .semibold))
       }
-      .foregroundColor(isActive ? .white : .primary)
-      .padding(.horizontal, 16)
-      .padding(.vertical, 12)
-      .background(isActive ? Color.black : Color(hex: "FCFBF9"))
-      .overlay(
-        RoundedRectangle(cornerRadius: 24)
-          .stroke(Color(hex: "E2E2E0"), lineWidth: isActive ? 0 : 1)
-      )
-      .cornerRadius(24)
+      .foregroundColor(isActive ? .white : .black)
+      .padding(.horizontal, 14)
+      .padding(.vertical, 11)
+      .background(isActive ? Color.black : Color(UIColor.systemGray6))
+      .cornerRadius(22)
     }
-    .opacity(isDisabled ? 0.35 : 1.0)
+    .opacity(isDisabled ? 0.3 : 1.0)
     .disabled(isDisabled)
   }
 }

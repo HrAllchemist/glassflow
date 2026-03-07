@@ -21,22 +21,22 @@ struct TranscriptionContentView: View {
   private var emptyState: some View {
     VStack(spacing: 12) {
       Image(systemName: "text.bubble")
-        .font(.system(size: 36))
-        .foregroundColor(Color(hex: "C8C8C6"))
+        .font(.system(size: 40))
+        .foregroundColor(.gray)
       Text("Tap Scribe to start transcribing")
-        .font(.system(size: 15))
-        .foregroundColor(.secondary)
+        .font(.system(size: 16))
+        .foregroundColor(.gray)
     }
   }
 
   private var listeningState: some View {
     VStack(spacing: 12) {
       Image(systemName: "waveform")
-        .font(.system(size: 28))
-        .foregroundColor(.secondary)
+        .font(.system(size: 32))
+        .foregroundColor(.black.opacity(0.4))
       Text("Listening...")
-        .font(.system(size: 15))
-        .foregroundColor(.secondary)
+        .font(.system(size: 16, weight: .medium))
+        .foregroundColor(.black.opacity(0.5))
     }
   }
 
@@ -86,13 +86,13 @@ struct SegmentRow: View {
         }
         Text(timeString(segment.timestamp))
           .font(.system(size: 11, design: .monospaced))
-          .foregroundColor(Color(hex: "B0B0AE"))
+          .foregroundColor(.gray)
       }
 
       // Transcript text
       Text(segment.text)
-        .font(.system(size: 16))
-        .foregroundColor(segment.isFinal ? .primary : .secondary)
+        .font(.system(size: 17))
+        .foregroundColor(segment.isFinal ? .black : .black.opacity(0.4))
         .fixedSize(horizontal: false, vertical: true)
         .lineSpacing(3)
     }
