@@ -8,6 +8,7 @@ struct SettingsView: View {
   @State private var geminiSystemPrompt: String = ""
   @State private var deepgramAPIKey: String = ""
   @State private var webrtcSignalingURL: String = ""
+  @State private var preferPhoneMic: Bool = false
   @State private var showResetConfirmation = false
 
   var body: some View {
@@ -41,6 +42,10 @@ struct SettingsView: View {
               .disableAutocorrection(true)
               .font(.system(.body, design: .monospaced))
           }
+        }
+
+        Section(header: Text("Audio"), footer: Text("When enabled, always use the iPhone microphone for transcription and AI, even in glasses streaming mode.")) {
+          Toggle("Prefer iPhone Microphone", isOn: $preferPhoneMic)
         }
 
         Section(header: Text("WebRTC")) {
@@ -99,6 +104,7 @@ struct SettingsView: View {
     geminiSystemPrompt = settings.geminiSystemPrompt
     deepgramAPIKey = settings.deepgramAPIKey
     webrtcSignalingURL = settings.webrtcSignalingURL
+    preferPhoneMic = settings.preferPhoneMic
   }
 
   private func save() {
@@ -106,5 +112,6 @@ struct SettingsView: View {
     settings.geminiSystemPrompt = geminiSystemPrompt.trimmingCharacters(in: .whitespacesAndNewlines)
     settings.deepgramAPIKey = deepgramAPIKey.trimmingCharacters(in: .whitespacesAndNewlines)
     settings.webrtcSignalingURL = webrtcSignalingURL.trimmingCharacters(in: .whitespacesAndNewlines)
+    settings.preferPhoneMic = preferPhoneMic
   }
 }

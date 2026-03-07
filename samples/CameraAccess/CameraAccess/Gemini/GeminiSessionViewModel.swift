@@ -91,7 +91,8 @@ class GeminiSessionViewModel: ObservableObject {
 
     // Setup audio
     do {
-      try audioManager.setupAudioSession(useIPhoneMode: streamingMode == .iPhone)
+      let usePhoneMic = streamingMode == .iPhone || SettingsManager.shared.preferPhoneMic
+      try audioManager.setupAudioSession(useIPhoneMode: usePhoneMic)
     } catch {
       errorMessage = "Audio setup failed: \(error.localizedDescription)"
       isGeminiActive = false

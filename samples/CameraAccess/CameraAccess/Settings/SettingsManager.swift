@@ -10,6 +10,7 @@ final class SettingsManager {
     case geminiSystemPrompt
     case deepgramAPIKey
     case webrtcSignalingURL
+    case preferPhoneMic
   }
 
   private init() {}
@@ -33,6 +34,13 @@ final class SettingsManager {
     set { defaults.set(newValue, forKey: Key.deepgramAPIKey.rawValue) }
   }
 
+  // MARK: - Audio
+
+  var preferPhoneMic: Bool {
+    get { defaults.object(forKey: Key.preferPhoneMic.rawValue) as? Bool ?? false }
+    set { defaults.set(newValue, forKey: Key.preferPhoneMic.rawValue) }
+  }
+
   // MARK: - WebRTC
 
   var webrtcSignalingURL: String {
@@ -43,7 +51,7 @@ final class SettingsManager {
   // MARK: - Reset
 
   func resetAll() {
-    for key in [Key.geminiAPIKey, .geminiSystemPrompt, .deepgramAPIKey, .webrtcSignalingURL] {
+    for key in [Key.geminiAPIKey, .geminiSystemPrompt, .deepgramAPIKey, .webrtcSignalingURL, .preferPhoneMic] {
       defaults.removeObject(forKey: key.rawValue)
     }
   }
