@@ -46,12 +46,12 @@ class AudioManager {
       // No echo cancellation, no noise suppression -- raw room audio for best multi-speaker pickup
       mode = .measurement
       options = useIPhoneMode
-        ? [.defaultToSpeaker, .allowBluetooth]
+        ? [.defaultToSpeaker]  // No Bluetooth options -- force built-in mic
         : [.allowBluetoothHFP, .mixWithOthers, .defaultToSpeaker]
     } else if useIPhoneMode {
       // Gemini on iPhone: echo cancellation needed (mic + speaker co-located)
       mode = .voiceChat
-      options = [.defaultToSpeaker, .allowBluetooth]
+      options = [.defaultToSpeaker]  // No Bluetooth options -- force built-in mic
     } else {
       // Gemini on glasses: minimal processing, Bluetooth routing
       mode = .measurement
@@ -62,8 +62,21 @@ class AudioManager {
     try session.setPreferredSampleRate(GeminiConfig.inputAudioSampleRate)
     try session.setPreferredIOBufferDuration(0.064)
     try session.setActive(true)
-    NSLog("[Audio] Session mode: %@ (iPhone=%@, transcription=%@)",
-          mode.rawValue, useIPhoneMode ? "true" : "false", transcriptionOnly ? "true" : "false")
+
+    // When iPhone mic is preferred, explicitly select the built-in microphone
+    // to override any Bluetooth routing from the active glasses connection
+    if useIPhoneMode {
+      if let builtInMic = session.availableInputs?.first(where: { $0.portType == .builtInMic }) {
+        try session.setPreferredInput(builtInMic)
+        NSLog("[Audio] Forced input to built-in mic: %@", builtInMic.portName)
+      }
+    } else {
+      try session.setPreferredInput(nil)  // Let iOS pick (Bluetooth if available)
+    }
+
+    NSLog("[Audio] Session mode: %@ (iPhone=%@, transcription=%@), input: %@",
+          mode.rawValue, useIPhoneMode ? "true" : "false", transcriptionOnly ? "true" : "false",
+          session.currentRoute.inputs.first?.portType.rawValue ?? "unknown")
 
     setupInterruptionHandling()
     setupAppLifecycleObservers()
