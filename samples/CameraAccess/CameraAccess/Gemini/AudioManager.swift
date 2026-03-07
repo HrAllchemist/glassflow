@@ -45,15 +45,14 @@ class AudioManager {
     if transcriptionOnly {
       // No echo cancellation, no noise suppression -- raw room audio for best multi-speaker pickup
       mode = .measurement
-      options = useIPhoneMode
-        ? [.allowBluetoothA2DP]  // A2DP output to glasses, no .defaultToSpeaker so BT wins
-        : [.allowBluetoothHFP, .mixWithOthers, .defaultToSpeaker]
+      // Keep HFP alive so Bluetooth stays connected; input override via setPreferredInput below
+      options = [.allowBluetoothHFP, .mixWithOthers]
     } else if useIPhoneMode {
-      // Gemini on iPhone: echo cancellation + A2DP output to glasses
+      // Gemini on iPhone: echo cancellation, keep BT connection for output
       mode = .voiceChat
-      options = [.allowBluetoothA2DP]  // A2DP output to glasses, no .defaultToSpeaker so BT wins
+      options = [.allowBluetoothHFP]
     } else {
-      // Gemini on glasses: minimal processing, Bluetooth routing
+      // Glasses mode: HFP for both input and output
       mode = .measurement
       options = [.allowBluetoothHFP, .mixWithOthers, .defaultToSpeaker]
     }
@@ -74,9 +73,10 @@ class AudioManager {
       try session.setPreferredInput(nil)  // Let iOS pick (Bluetooth if available)
     }
 
-    NSLog("[Audio] Session mode: %@ (iPhone=%@, transcription=%@), input: %@",
+    NSLog("[Audio] Session mode: %@ (iPhone=%@, transcription=%@), input: %@, output: %@",
           mode.rawValue, useIPhoneMode ? "true" : "false", transcriptionOnly ? "true" : "false",
-          session.currentRoute.inputs.first?.portType.rawValue ?? "unknown")
+          session.currentRoute.inputs.first?.portType.rawValue ?? "unknown",
+          session.currentRoute.outputs.first?.portType.rawValue ?? "unknown")
 
     setupInterruptionHandling()
     setupAppLifecycleObservers()
