@@ -20,8 +20,6 @@ class GeminiLiveService: ObservableObject {
   var onDisconnected: ((String?) -> Void)?
   var onInputTranscription: ((String) -> Void)?
   var onOutputTranscription: ((String) -> Void)?
-  var onToolCall: ((GeminiToolCall) -> Void)?
-  var onToolCallCancellation: ((GeminiToolCallCancellation) -> Void)?
 
   // Latency tracking
   private var lastUserSpeechEnd: Date?
@@ -108,8 +106,6 @@ class GeminiLiveService: ObservableObject {
     delegate.onOpen = nil
     delegate.onClose = nil
     delegate.onError = nil
-    onToolCall = nil
-    onToolCallCancellation = nil
     connectionState = .disconnected
     isModelSpeaking = false
     resolveConnect(success: false)
@@ -148,12 +144,6 @@ class GeminiLiveService: ObservableObject {
     }
   }
 
-  func sendToolResponse(_ response: [String: Any]) {
-    sendQueue.async { [weak self] in
-      self?.sendJSON(response)
-    }
-  }
-
   // MARK: - Private
 
   private func resolveConnect(success: Bool) {
@@ -176,11 +166,6 @@ class GeminiLiveService: ObservableObject {
         "systemInstruction": [
           "parts": [
             ["text": GeminiConfig.systemInstruction]
-          ]
-        ],
-        "tools": [
-          [
-            "functionDeclarations": ToolDeclarations.allDeclarations()
           ]
         ],
         "realtimeInputConfig": [
@@ -262,20 +247,6 @@ class GeminiLiveService: ObservableObject {
       connectionState = .disconnected
       isModelSpeaking = false
       onDisconnected?("Server closing (time left: \(seconds)s)")
-      return
-    }
-
-    // Tool call from model (top-level message, not inside serverContent)
-    if let toolCall = GeminiToolCall(json: json) {
-      NSLog("[Gemini] Tool call received: %d function(s)", toolCall.functionCalls.count)
-      onToolCall?(toolCall)
-      return
-    }
-
-    // Tool call cancellation (user interrupted during tool execution)
-    if let cancellation = GeminiToolCallCancellation(json: json) {
-      NSLog("[Gemini] Tool call cancellation: %@", cancellation.ids.joined(separator: ", "))
-      onToolCallCancellation?(cancellation)
       return
     }
 

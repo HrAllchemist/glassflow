@@ -66,8 +66,6 @@ struct StreamView: View {
               )
             }
 
-            ToolCallStatusView(status: geminiVM.toolCallStatus)
-
             if geminiVM.isModelSpeaking {
               HStack(spacing: 8) {
                 Image(systemName: "speaker.wave.2.fill")

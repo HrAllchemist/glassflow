@@ -5,13 +5,9 @@ struct SettingsView: View {
   private let settings = SettingsManager.shared
 
   @State private var geminiAPIKey: String = ""
-  @State private var openClawHost: String = ""
-  @State private var openClawPort: String = ""
-  @State private var openClawHookToken: String = ""
-  @State private var openClawGatewayToken: String = ""
   @State private var geminiSystemPrompt: String = ""
-  @State private var webrtcSignalingURL: String = ""
   @State private var deepgramAPIKey: String = ""
+  @State private var webrtcSignalingURL: String = ""
   @State private var showResetConfirmation = false
 
   var body: some View {
@@ -33,48 +29,6 @@ struct SettingsView: View {
           TextEditor(text: $geminiSystemPrompt)
             .font(.system(.body, design: .monospaced))
             .frame(minHeight: 200)
-        }
-
-        Section(header: Text("OpenClaw"), footer: Text("Connect to an OpenClaw gateway running on your Mac for agentic tool-calling.")) {
-          VStack(alignment: .leading, spacing: 4) {
-            Text("Host")
-              .font(.caption)
-              .foregroundColor(.secondary)
-            TextField("http://your-mac.local", text: $openClawHost)
-              .autocapitalization(.none)
-              .disableAutocorrection(true)
-              .keyboardType(.URL)
-              .font(.system(.body, design: .monospaced))
-          }
-
-          VStack(alignment: .leading, spacing: 4) {
-            Text("Port")
-              .font(.caption)
-              .foregroundColor(.secondary)
-            TextField("18789", text: $openClawPort)
-              .keyboardType(.numberPad)
-              .font(.system(.body, design: .monospaced))
-          }
-
-          VStack(alignment: .leading, spacing: 4) {
-            Text("Hook Token")
-              .font(.caption)
-              .foregroundColor(.secondary)
-            TextField("Hook token", text: $openClawHookToken)
-              .autocapitalization(.none)
-              .disableAutocorrection(true)
-              .font(.system(.body, design: .monospaced))
-          }
-
-          VStack(alignment: .leading, spacing: 4) {
-            Text("Gateway Token")
-              .font(.caption)
-              .foregroundColor(.secondary)
-            TextField("Gateway auth token", text: $openClawGatewayToken)
-              .autocapitalization(.none)
-              .disableAutocorrection(true)
-              .font(.system(.body, design: .monospaced))
-          }
         }
 
         Section(header: Text("Deepgram"), footer: Text("API key for real-time transcription. Get one at deepgram.com")) {
@@ -143,24 +97,14 @@ struct SettingsView: View {
   private func loadCurrentValues() {
     geminiAPIKey = settings.geminiAPIKey
     geminiSystemPrompt = settings.geminiSystemPrompt
-    openClawHost = settings.openClawHost
-    openClawPort = String(settings.openClawPort)
-    openClawHookToken = settings.openClawHookToken
-    openClawGatewayToken = settings.openClawGatewayToken
-    webrtcSignalingURL = settings.webrtcSignalingURL
     deepgramAPIKey = settings.deepgramAPIKey
+    webrtcSignalingURL = settings.webrtcSignalingURL
   }
 
   private func save() {
     settings.geminiAPIKey = geminiAPIKey.trimmingCharacters(in: .whitespacesAndNewlines)
     settings.geminiSystemPrompt = geminiSystemPrompt.trimmingCharacters(in: .whitespacesAndNewlines)
-    settings.openClawHost = openClawHost.trimmingCharacters(in: .whitespacesAndNewlines)
-    if let port = Int(openClawPort.trimmingCharacters(in: .whitespacesAndNewlines)) {
-      settings.openClawPort = port
-    }
-    settings.openClawHookToken = openClawHookToken.trimmingCharacters(in: .whitespacesAndNewlines)
-    settings.openClawGatewayToken = openClawGatewayToken.trimmingCharacters(in: .whitespacesAndNewlines)
-    settings.webrtcSignalingURL = webrtcSignalingURL.trimmingCharacters(in: .whitespacesAndNewlines)
     settings.deepgramAPIKey = deepgramAPIKey.trimmingCharacters(in: .whitespacesAndNewlines)
+    settings.webrtcSignalingURL = webrtcSignalingURL.trimmingCharacters(in: .whitespacesAndNewlines)
   }
 }
