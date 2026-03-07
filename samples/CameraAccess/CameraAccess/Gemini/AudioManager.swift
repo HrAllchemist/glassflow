@@ -46,12 +46,12 @@ class AudioManager {
       // No echo cancellation, no noise suppression -- raw room audio for best multi-speaker pickup
       mode = .measurement
       options = useIPhoneMode
-        ? [.defaultToSpeaker, .allowBluetoothA2DP]  // A2DP for output to glasses, input forced to built-in mic
+        ? [.allowBluetoothA2DP]  // A2DP output to glasses, no .defaultToSpeaker so BT wins
         : [.allowBluetoothHFP, .mixWithOthers, .defaultToSpeaker]
     } else if useIPhoneMode {
       // Gemini on iPhone: echo cancellation + A2DP output to glasses
       mode = .voiceChat
-      options = [.defaultToSpeaker, .allowBluetoothA2DP]  // A2DP for output to glasses, input forced to built-in mic
+      options = [.allowBluetoothA2DP]  // A2DP output to glasses, no .defaultToSpeaker so BT wins
     } else {
       // Gemini on glasses: minimal processing, Bluetooth routing
       mode = .measurement
