@@ -9,9 +9,8 @@
 //
 // StreamView.swift
 //
-// Main UI for video streaming from Meta wearable devices using the DAT SDK.
-// This view demonstrates the complete streaming API: video streaming with real-time display, photo capture,
-// and error handling. Extended with Gemini Live AI assistant and WebRTC live streaming integration.
+// Main UI for GlassFlow real-time transcription.
+// White background with transcript as the primary content area.
 //
 
 import MWDATCore
@@ -26,84 +25,30 @@ struct StreamView: View {
 
   var body: some View {
     ZStack {
-      // Black background for letterboxing/pillarboxing
-      Color.black
+      Color(hex: "F8F7F5")
         .edgesIgnoringSafeArea(.all)
 
-      // Video backdrop: PiP when WebRTC connected, otherwise single local feed
-      if webrtcVM.isActive && webrtcVM.connectionState == .connected {
-        PiPVideoView(
-          localFrame: viewModel.currentVideoFrame,
-          remoteVideoTrack: webrtcVM.remoteVideoTrack,
-          hasRemoteVideo: webrtcVM.hasRemoteVideo
+      VStack(spacing: 0) {
+        // Top bar with status
+        TopBar(
+          transcriptionVM: transcriptionVM,
+          geminiVM: geminiVM,
+          webrtcVM: webrtcVM
         )
-      } else if let videoFrame = viewModel.currentVideoFrame, viewModel.hasReceivedFirstFrame {
-        GeometryReader { geometry in
-          Image(uiImage: videoFrame)
-            .resizable()
-            .aspectRatio(contentMode: .fill)
-            .frame(width: geometry.size.width, height: geometry.size.height)
-            .clipped()
-        }
-        .edgesIgnoringSafeArea(.all)
-      } else {
-        ProgressView()
-          .scaleEffect(1.5)
-          .foregroundColor(.white)
+
+        // Main transcript area
+        TranscriptionContentView(viewModel: transcriptionVM)
+
+        // Bottom controls
+        ControlsView(
+          viewModel: viewModel,
+          geminiVM: geminiVM,
+          webrtcVM: webrtcVM,
+          transcriptionVM: transcriptionVM
+        )
+        .padding(.horizontal, 24)
+        .padding(.bottom, 24)
       }
-
-      // Gemini status overlay (top) + speaking indicator
-      if geminiVM.isGeminiActive {
-        VStack {
-          GeminiStatusBar(geminiVM: geminiVM)
-          Spacer()
-
-          VStack(spacing: 8) {
-            if !geminiVM.userTranscript.isEmpty || !geminiVM.aiTranscript.isEmpty {
-              TranscriptView(
-                userText: geminiVM.userTranscript,
-                aiText: geminiVM.aiTranscript
-              )
-            }
-
-            if geminiVM.isModelSpeaking {
-              HStack(spacing: 8) {
-                Image(systemName: "speaker.wave.2.fill")
-                  .foregroundColor(.white)
-                  .font(.system(size: 14))
-                SpeakingIndicator()
-              }
-              .padding(.horizontal, 16)
-              .padding(.vertical, 8)
-              .background(Color.black.opacity(0.5))
-              .cornerRadius(20)
-            }
-          }
-          .padding(.bottom, 80)
-        }
-        .padding(.all, 24)
-      }
-
-      // WebRTC status overlay (top)
-      if webrtcVM.isActive {
-        VStack {
-          WebRTCStatusBar(webrtcVM: webrtcVM)
-          Spacer()
-        }
-        .padding(.all, 24)
-      }
-
-      // Transcription overlay
-      if transcriptionVM.isActive {
-        TranscriptionOverlayView(viewModel: transcriptionVM)
-      }
-
-      // Bottom controls layer
-      VStack {
-        Spacer()
-        ControlsView(viewModel: viewModel, geminiVM: geminiVM, webrtcVM: webrtcVM, transcriptionVM: transcriptionVM)
-      }
-      .padding(.all, 24)
     }
     .onDisappear {
       Task {
@@ -121,7 +66,6 @@ struct StreamView: View {
         }
       }
     }
-    // Show captured photos from DAT SDK in a preview sheet
     .sheet(isPresented: $viewModel.showPhotoPreview) {
       if let photo = viewModel.capturedPhoto {
         PhotoPreviewView(
@@ -132,7 +76,6 @@ struct StreamView: View {
         )
       }
     }
-    // Gemini error alert
     .alert("AI Assistant", isPresented: Binding(
       get: { geminiVM.errorMessage != nil },
       set: { if !$0 { geminiVM.errorMessage = nil } }
@@ -141,7 +84,6 @@ struct StreamView: View {
     } message: {
       Text(geminiVM.errorMessage ?? "")
     }
-    // WebRTC error alert
     .alert("Live Stream", isPresented: Binding(
       get: { webrtcVM.errorMessage != nil },
       set: { if !$0 { webrtcVM.errorMessage = nil } }
@@ -150,7 +92,6 @@ struct StreamView: View {
     } message: {
       Text(webrtcVM.errorMessage ?? "")
     }
-    // Transcription error alert
     .alert("Transcription", isPresented: Binding(
       get: { transcriptionVM.errorMessage != nil },
       set: { if !$0 { transcriptionVM.errorMessage = nil } }
@@ -162,7 +103,80 @@ struct StreamView: View {
   }
 }
 
-// Extracted controls for clarity
+// MARK: - Top Bar
+
+struct TopBar: View {
+  @ObservedObject var transcriptionVM: TranscriptionViewModel
+  @ObservedObject var geminiVM: GeminiSessionViewModel
+  @ObservedObject var webrtcVM: WebRTCSessionViewModel
+
+  var body: some View {
+    HStack {
+      Text("GlassFlow")
+        .font(.system(size: 20, weight: .semibold))
+        .foregroundColor(.primary)
+
+      Spacer()
+
+      if transcriptionVM.isActive {
+        StatusDot(color: statusColor, text: statusText)
+      }
+      if geminiVM.isGeminiActive {
+        StatusDot(color: .green, text: "AI")
+      }
+      if webrtcVM.isActive {
+        StatusDot(color: .blue, text: "Live")
+      }
+    }
+    .padding(.horizontal, 24)
+    .padding(.vertical, 12)
+  }
+
+  private var statusColor: Color {
+    switch transcriptionVM.connectionState {
+    case .connected: return .green
+    case .connecting: return .yellow
+    case .disconnected: return .gray
+    case .error: return .red
+    }
+  }
+
+  private var statusText: String {
+    switch transcriptionVM.connectionState {
+    case .connected: return "Transcribing"
+    case .connecting: return "Connecting..."
+    case .disconnected: return "Off"
+    case .error: return "Error"
+    }
+  }
+}
+
+struct StatusDot: View {
+  let color: Color
+  let text: String
+
+  var body: some View {
+    HStack(spacing: 5) {
+      Circle()
+        .fill(color)
+        .frame(width: 7, height: 7)
+      Text(text)
+        .font(.system(size: 12, weight: .medium))
+        .foregroundColor(.secondary)
+    }
+    .padding(.horizontal, 10)
+    .padding(.vertical, 5)
+    .background(Color(hex: "FCFBF9"))
+    .overlay(
+      RoundedRectangle(cornerRadius: 12)
+        .stroke(Color(hex: "E2E2E0"), lineWidth: 1)
+    )
+    .cornerRadius(12)
+  }
+}
+
+// MARK: - Controls
+
 struct ControlsView: View {
   @ObservedObject var viewModel: StreamSessionViewModel
   @ObservedObject var geminiVM: GeminiSessionViewModel
@@ -170,45 +184,27 @@ struct ControlsView: View {
   @ObservedObject var transcriptionVM: TranscriptionViewModel
 
   var body: some View {
-    // Controls row
-    HStack(spacing: 8) {
-      CustomButton(
-        title: "Stop streaming",
-        style: .destructive,
-        isDisabled: false
-      ) {
-        Task {
-          await viewModel.stopSession()
-        }
+    HStack(spacing: 12) {
+      // Stop streaming
+      Button {
+        Task { await viewModel.stopSession() }
+      } label: {
+        Image(systemName: "stop.fill")
+          .font(.system(size: 14))
+          .foregroundColor(.red)
+          .frame(width: 48, height: 48)
+          .background(Color.red.opacity(0.1))
+          .cornerRadius(24)
       }
 
-      // Photo button (glasses mode only -- DAT SDK capture)
-      if viewModel.streamingMode == .glasses {
-        CircleButton(icon: "camera.fill", text: nil) {
-          viewModel.capturePhoto()
-        }
-      }
+      Spacer()
 
-      // Gemini AI button (disabled when WebRTC is active — audio conflict)
-      CircleButton(
-        icon: geminiVM.isGeminiActive ? "waveform.circle.fill" : "waveform.circle",
-        text: "AI"
-      ) {
-        Task {
-          if geminiVM.isGeminiActive {
-            geminiVM.stopSession()
-          } else {
-            await geminiVM.startSession()
-          }
-        }
-      }
-      .opacity(webrtcVM.isActive || transcriptionVM.isActive ? 0.4 : 1.0)
-      .disabled(webrtcVM.isActive || transcriptionVM.isActive)
-
-      // Transcription button (disabled when Gemini or WebRTC is active -- audio conflict)
-      CircleButton(
+      // Transcription toggle
+      ControlPill(
         icon: transcriptionVM.isActive ? "text.bubble.fill" : "text.bubble",
-        text: "Scribe"
+        label: "Scribe",
+        isActive: transcriptionVM.isActive,
+        isDisabled: geminiVM.isGeminiActive || webrtcVM.isActive
       ) {
         Task {
           if transcriptionVM.isActive {
@@ -218,15 +214,31 @@ struct ControlsView: View {
           }
         }
       }
-      .opacity(geminiVM.isGeminiActive || webrtcVM.isActive ? 0.4 : 1.0)
-      .disabled(geminiVM.isGeminiActive || webrtcVM.isActive)
 
-      // WebRTC Live Stream button (disabled when Gemini is active — audio conflict)
-      CircleButton(
+      // Gemini AI toggle
+      ControlPill(
+        icon: geminiVM.isGeminiActive ? "waveform.circle.fill" : "waveform.circle",
+        label: "AI",
+        isActive: geminiVM.isGeminiActive,
+        isDisabled: webrtcVM.isActive || transcriptionVM.isActive
+      ) {
+        Task {
+          if geminiVM.isGeminiActive {
+            geminiVM.stopSession()
+          } else {
+            await geminiVM.startSession()
+          }
+        }
+      }
+
+      // WebRTC Live toggle
+      ControlPill(
         icon: webrtcVM.isActive
           ? "antenna.radiowaves.left.and.right.circle.fill"
           : "antenna.radiowaves.left.and.right.circle",
-        text: "Live"
+        label: "Live",
+        isActive: webrtcVM.isActive,
+        isDisabled: geminiVM.isGeminiActive || transcriptionVM.isActive
       ) {
         Task {
           if webrtcVM.isActive {
@@ -236,8 +248,50 @@ struct ControlsView: View {
           }
         }
       }
-      .opacity(geminiVM.isGeminiActive || transcriptionVM.isActive ? 0.4 : 1.0)
-      .disabled(geminiVM.isGeminiActive || transcriptionVM.isActive)
     }
+  }
+}
+
+struct ControlPill: View {
+  let icon: String
+  let label: String
+  let isActive: Bool
+  let isDisabled: Bool
+  let action: () -> Void
+
+  var body: some View {
+    Button(action: action) {
+      HStack(spacing: 6) {
+        Image(systemName: icon)
+          .font(.system(size: 16))
+        Text(label)
+          .font(.system(size: 13, weight: .medium))
+      }
+      .foregroundColor(isActive ? .white : .primary)
+      .padding(.horizontal, 16)
+      .padding(.vertical, 12)
+      .background(isActive ? Color.black : Color(hex: "FCFBF9"))
+      .overlay(
+        RoundedRectangle(cornerRadius: 24)
+          .stroke(Color(hex: "E2E2E0"), lineWidth: isActive ? 0 : 1)
+      )
+      .cornerRadius(24)
+    }
+    .opacity(isDisabled ? 0.35 : 1.0)
+    .disabled(isDisabled)
+  }
+}
+
+// MARK: - Color Extension
+
+extension Color {
+  init(hex: String) {
+    let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+    var int: UInt64 = 0
+    Scanner(string: hex).scanHexInt64(&int)
+    let r = Double((int >> 16) & 0xFF) / 255.0
+    let g = Double((int >> 8) & 0xFF) / 255.0
+    let b = Double(int & 0xFF) / 255.0
+    self.init(red: r, green: g, blue: b)
   }
 }
