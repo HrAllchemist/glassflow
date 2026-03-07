@@ -276,7 +276,7 @@ struct ControlPill: View {
       .background(isActive ? Color.black : Color(UIColor.systemGray6))
       .cornerRadius(22)
     }
-    .opacity(isDisabled ? 0.3 : 1.0)
+    .opacity(isDisabled ? 0.5 : 1.0)
     .disabled(isDisabled)
   }
 }
