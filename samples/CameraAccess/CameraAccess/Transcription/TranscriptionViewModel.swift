@@ -65,7 +65,7 @@ class TranscriptionViewModel: ObservableObject {
     // Setup audio
     do {
       let usePhoneMic = streamingMode == .iPhone || SettingsManager.shared.preferPhoneMic
-      try audioManager.setupAudioSession(useIPhoneMode: usePhoneMic)
+      try audioManager.setupAudioSession(useIPhoneMode: usePhoneMic, transcriptionOnly: true)
     } catch {
       errorMessage = "Audio setup failed: \(error.localizedDescription)"
       isActive = false

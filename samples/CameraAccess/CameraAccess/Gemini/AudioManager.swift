@@ -33,28 +33,37 @@ class AudioManager {
     )!
   }
 
-  func setupAudioSession(useIPhoneMode: Bool = false) throws {
+  /// - useIPhoneMode: route audio to iPhone mic instead of glasses Bluetooth
+  /// - transcriptionOnly: disable all voice processing for better room capture
+  func setupAudioSession(useIPhoneMode: Bool = false, transcriptionOnly: Bool = false) throws {
     self.useIPhoneMode = useIPhoneMode
     let session = AVAudioSession.sharedInstance()
-    // iPhone mode: voiceChat for aggressive echo cancellation (mic + speaker co-located)
-    // Glasses mode: measurement for minimal voice processing (captures room audio better)
-    if useIPhoneMode {
-      try session.setCategory(
-        .playAndRecord,
-        mode: .voiceChat,
-        options: [.defaultToSpeaker, .allowBluetooth]
-      )
+
+    let mode: AVAudioSession.Mode
+    let options: AVAudioSession.CategoryOptions
+
+    if transcriptionOnly {
+      // No echo cancellation, no noise suppression -- raw room audio for best multi-speaker pickup
+      mode = .measurement
+      options = useIPhoneMode
+        ? [.defaultToSpeaker, .allowBluetooth]
+        : [.allowBluetoothHFP, .mixWithOthers, .defaultToSpeaker]
+    } else if useIPhoneMode {
+      // Gemini on iPhone: echo cancellation needed (mic + speaker co-located)
+      mode = .voiceChat
+      options = [.defaultToSpeaker, .allowBluetooth]
     } else {
-      try session.setCategory(
-        .playAndRecord,
-        mode: .measurement,
-        options: [.allowBluetoothHFP, .mixWithOthers, .defaultToSpeaker]
-      )
+      // Gemini on glasses: minimal processing, Bluetooth routing
+      mode = .measurement
+      options = [.allowBluetoothHFP, .mixWithOthers, .defaultToSpeaker]
     }
+
+    try session.setCategory(.playAndRecord, mode: mode, options: options)
     try session.setPreferredSampleRate(GeminiConfig.inputAudioSampleRate)
     try session.setPreferredIOBufferDuration(0.064)
     try session.setActive(true)
-    NSLog("[Audio] Session mode: %@", useIPhoneMode ? "voiceChat (iPhone)" : "measurement (glasses)")
+    NSLog("[Audio] Session mode: %@ (iPhone=%@, transcription=%@)",
+          mode.rawValue, useIPhoneMode ? "true" : "false", transcriptionOnly ? "true" : "false")
 
     setupInterruptionHandling()
     setupAppLifecycleObservers()
