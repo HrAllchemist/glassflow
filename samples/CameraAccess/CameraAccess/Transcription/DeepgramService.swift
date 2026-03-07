@@ -24,6 +24,9 @@ class DeepgramService: NSObject {
   private var webSocket: URLSessionWebSocketTask?
   private var urlSession: URLSession?
   private var partialCounter = 0
+  private var reconnectAttempts = 0
+  private let maxReconnectAttempts = 3
+  private var isDisconnecting = false
 
   private let apiKey: String
   private let sampleRate: Int
@@ -37,17 +40,16 @@ class DeepgramService: NSObject {
   }
 
   func connect() {
-    guard case .disconnected = connectionState else { return }
-    guard case .error = connectionState else {
-      if case .connecting = connectionState { return }
-      if case .connected = connectionState { return }
-      startConnection()
+    switch connectionState {
+    case .connecting, .connected:
       return
+    case .disconnected, .error:
+      startConnection()
     }
-    startConnection()
   }
 
   private func startConnection() {
+    isDisconnecting = false
     updateState(.connecting)
 
     var components = URLComponents(string: "wss://api.deepgram.com/v1/listen")!
@@ -89,6 +91,7 @@ class DeepgramService: NSObject {
   }
 
   func disconnect() {
+    isDisconnecting = true
     let closeMessage = "{\"type\": \"CloseStream\"}"
     webSocket?.send(.string(closeMessage)) { [weak self] _ in
       self?.webSocket?.cancel(with: .normalClosure, reason: nil)
@@ -101,7 +104,28 @@ class DeepgramService: NSObject {
     urlSession?.invalidateAndCancel()
     urlSession = nil
     partialCounter = 0
+    reconnectAttempts = 0
     updateState(.disconnected)
+  }
+
+  private func attemptReconnect() {
+    guard !isDisconnecting, reconnectAttempts < maxReconnectAttempts else {
+      NSLog("[Deepgram] Not reconnecting (disconnecting=%@, attempts=%d)",
+            isDisconnecting ? "true" : "false", reconnectAttempts)
+      return
+    }
+    reconnectAttempts += 1
+    let delay = Double(reconnectAttempts) * 1.0
+    NSLog("[Deepgram] Reconnecting in %.0fs (attempt %d/%d)", delay, reconnectAttempts, maxReconnectAttempts)
+
+    webSocket = nil
+    urlSession?.invalidateAndCancel()
+    urlSession = nil
+
+    DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+      guard let self, !self.isDisconnecting else { return }
+      self.startConnection()
+    }
   }
 
   private func updateState(_ state: DeepgramConnectionState) {
@@ -130,6 +154,7 @@ class DeepgramService: NSObject {
       case .failure(let error):
         NSLog("[Deepgram] WebSocket receive error: %@", error.localizedDescription)
         self.updateState(.error(error.localizedDescription))
+        self.attemptReconnect()
       }
     }
   }
@@ -193,6 +218,7 @@ extension DeepgramService: URLSessionWebSocketDelegate {
     didOpenWithProtocol protocol: String?
   ) {
     NSLog("[Deepgram] WebSocket connected")
+    reconnectAttempts = 0
     updateState(.connected)
   }
 
@@ -203,6 +229,11 @@ extension DeepgramService: URLSessionWebSocketDelegate {
     reason: Data?
   ) {
     NSLog("[Deepgram] WebSocket closed: %d", closeCode.rawValue)
-    cleanup()
+    if !isDisconnecting && closeCode != .normalClosure {
+      updateState(.error("Connection closed unexpectedly"))
+      attemptReconnect()
+    } else {
+      cleanup()
+    }
   }
 }
