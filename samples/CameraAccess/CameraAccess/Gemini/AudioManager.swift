@@ -46,15 +46,15 @@ class AudioManager {
       // No echo cancellation, no noise suppression -- raw room audio for best multi-speaker pickup
       mode = .measurement
       // Keep HFP alive so Bluetooth stays connected; input override via setPreferredInput below
-      options = [.allowBluetoothHFP, .mixWithOthers]
+      options = [.allowBluetoothA2DP, .mixWithOthers]
     } else if useIPhoneMode {
       // Gemini on iPhone: echo cancellation, keep BT connection for output
       mode = .voiceChat
-      options = [.allowBluetoothHFP]
+      options = [.allowBluetoothA2DP]
     } else {
       // Glasses mode: HFP for both input and output
       mode = .measurement
-      options = [.allowBluetoothHFP, .mixWithOthers, .defaultToSpeaker]
+      options = [.allowBluetoothA2DP, .mixWithOthers, .defaultToSpeaker]
     }
 
     try session.setCategory(.playAndRecord, mode: mode, options: options)
