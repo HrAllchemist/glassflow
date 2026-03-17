@@ -1,0 +1,31 @@
+name: Build GlassFlow IPA
+on: [workflow_dispatch]
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Prepare Secrets.swift
+        run: |
+          cd samples/CameraAccess
+          cp CameraAccess/Secrets.swift.example CameraAccess/Secrets.swift
+
+      - name: Build Xcode Project
+        run: |
+          cd samples/CameraAccess
+          xcodebuild clean build -project CameraAccess.xcodeproj -scheme CameraAccess -sdk iphoneos -configuration Release CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO SYMROOT=$(PWD)/build
+
+      - name: Create IPA file
+        run: |
+          cd samples/CameraAccess
+          mkdir -p Payload
+          mv build/Release-iphoneos/CameraAccess.app Payload/
+          zip -r GlassFlow.ipa Payload
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: GlassFlow-IPA
+          path: samples/CameraAccess/GlassFlow.ipa
